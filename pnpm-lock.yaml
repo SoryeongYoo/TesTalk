@@ -17,7 +17,7 @@ importers:
 
   apps/web:
     dependencies:
-      '@speaksim/shared':
+      '@testalk/shared':
         specifier: workspace:*
         version: link:../../packages/shared
       next:

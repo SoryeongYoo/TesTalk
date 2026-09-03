@@ -1,5 +1,5 @@
 {
-  "name": "speaksim",
+  "name": "testalk",
   "private": true,
   "packageManager": "pnpm@9.7.0",
   "engines": {
