@@ -9,9 +9,11 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "verify:generate": "tsx apps/web/scripts/verify-generate-test-set.ts"
   },
   "devDependencies": {
+    "tsx": "^4.23.13",
     "turbo": "^2.1.0",
     "typescript": "^5.5.4"
   }
