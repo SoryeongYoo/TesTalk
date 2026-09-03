@@ -138,6 +138,18 @@ export const OPIC_BLUEPRINT: readonly BlueprintSlot[] = [
   },
 ];
 
+/**
+ * 세트 내 모든 문항이 같은 topic을 다뤄야 하는 그룹.
+ * 콤보1~3(2~4, 5~7, 8~10)과 롤플레이(11~13)는 하나의 주제를 세 문항에 걸쳐 묻는다.
+ * intro(1번)와 advanced(14~15번)는 각 문항이 독립 주제를 가질 수 있어 제외한다.
+ */
+export const TOPIC_CONSISTENT_GROUPS: readonly OpicGroup[] = [
+  "combo1",
+  "combo2",
+  "combo3",
+  "roleplay",
+];
+
 /** 문항 번호(1~15)로 blueprint 슬롯을 찾는다. */
 export function getBlueprintSlot(slotNo: number): BlueprintSlot | undefined {
   return OPIC_BLUEPRINT.find((slot) => slot.slotNo === slotNo);
