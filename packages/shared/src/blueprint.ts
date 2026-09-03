@@ -150,6 +150,21 @@ export const TOPIC_CONSISTENT_GROUPS: readonly OpicGroup[] = [
   "roleplay",
 ];
 
+/**
+ * Topic Allocator가 topic(과 source)을 배정해야 하는 그룹.
+ * intro(1번)는 "자기소개"로 topic 없이 고정 진행되므로 제외한다.
+ * (참고: docs/PLAN.md 4-2 Topic Allocator)
+ */
+export const TOPIC_ALLOCATION_GROUPS = [
+  "combo1",
+  "combo2",
+  "combo3",
+  "roleplay",
+  "advanced",
+] as const;
+
+export type TopicAllocationGroup = (typeof TOPIC_ALLOCATION_GROUPS)[number];
+
 /** 문항 번호(1~15)로 blueprint 슬롯을 찾는다. */
 export function getBlueprintSlot(slotNo: number): BlueprintSlot | undefined {
   return OPIC_BLUEPRINT.find((slot) => slot.slotNo === slotNo);
