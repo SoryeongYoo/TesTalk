@@ -1,12 +1,11 @@
 import { TOPIC_ALLOCATION_GROUPS, type TopicAllocationGroup } from "./blueprint";
+import {
+  assertFifteenQuestionMode,
+  assertOpicDifficultyLevel,
+  type OpicDifficultyLevel,
+} from "./difficulty";
 import type { OpicSource } from "./schema";
 import { SURPRISE_TOPIC_POOL } from "./topicPool";
-
-/**
- * Self-Assessment 난이도(1~6단계). (참고: docs/PLAN.md 2-1)
- * 1~2단계(12문항 모드)는 아직 미구현이라 allocateTopics가 에러를 던진다.
- */
-export type OpicDifficultyLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
 /** 한 세트(콤보/롤플레이/어드밴스)에 배정된 topic과 source. */
 export interface TopicAllocationEntry {
@@ -51,17 +50,8 @@ export function allocateTopics(
   difficulty: OpicDifficultyLevel,
   options: AllocateTopicsOptions = {},
 ): TopicAllocationResult {
-  if (!Number.isInteger(difficulty) || difficulty < 1 || difficulty > 6) {
-    throw new Error(
-      `[allocateTopics] difficulty는 1~6 사이의 정수여야 합니다. 실제: ${difficulty}`,
-    );
-  }
-  if (difficulty <= 2) {
-    throw new Error(
-      `[allocateTopics] 난이도 1~2단계(12문항 모드, 어드밴스 없음)는 아직 지원하지 않습니다. ` +
-        `(참고: docs/PLAN.md 2-4) 실제: ${difficulty}`,
-    );
-  }
+  assertOpicDifficultyLevel(difficulty, "[allocateTopics]");
+  assertFifteenQuestionMode(difficulty, "[allocateTopics]");
 
   const rng = options.seed !== undefined ? mulberry32(options.seed) : Math.random;
 
