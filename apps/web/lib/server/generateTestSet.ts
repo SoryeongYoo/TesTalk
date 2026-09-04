@@ -24,8 +24,8 @@ import { getAnthropicClient } from "./anthropicClient";
  * apps/web/app/actions/generateTestSet.ts의 Server Action이 이 함수를 감싸서 호출한다.
  */
 
-/** 이 파이프라인이 쓰는 모델. 최신 Sonnet — 필요 시 이 상수만 바꾸면 된다. */
-const CLAUDE_MODEL = "claude-sonnet-5";
+/** 이 파이프라인이 쓰는 모델. 개발 단계라 비용이 싼 최신 Haiku 사용 — 필요 시 이 상수만 바꾸면 된다. */
+const CLAUDE_MODEL = "claude-haiku-4-5-20251001";
 const MAX_OUTPUT_TOKENS = 2048;
 
 /** 최초 1회 + 최대 2회 재시도(라운드) = 총 3라운드. 라운드마다 실패/불일치 세트만 다시 생성한다. */

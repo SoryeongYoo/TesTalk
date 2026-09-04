@@ -23,3 +23,6 @@ pnpm-debug.log*
 # misc
 .DS_Store
 *.tsbuildinfo
+
+# verify script output
+apps/web/scripts/last-output.txt
