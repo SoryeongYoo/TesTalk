@@ -2,6 +2,8 @@ export * from "./blueprint";
 export * from "./difficulty";
 export * from "./promptBuilder";
 export * from "./schema";
+export * from "./survey";
+export * from "./surveyValidator";
 export * from "./topicAllocator";
 export * from "./topicPool";
 export * from "./validator";
