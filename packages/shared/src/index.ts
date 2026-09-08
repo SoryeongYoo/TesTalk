@@ -1,5 +1,6 @@
 export * from "./blueprint";
 export * from "./difficulty";
+export * from "./examSession";
 export * from "./promptBuilder";
 export * from "./schema";
 export * from "./survey";

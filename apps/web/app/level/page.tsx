@@ -108,6 +108,11 @@ export default function LevelPage() {
   }
 
   if (view === "result") {
+    if (!selectedLevel) {
+      // 방어적 케이스 — 생성 성공(handleGenerate)은 항상 selectedLevel이 있어야 일어난다.
+      return null;
+    }
+
     return (
       <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-emerald-50 to-white">
         <div className="w-full max-w-2xl flex-1 px-6 pb-32 pt-10">
@@ -125,7 +130,7 @@ export default function LevelPage() {
             <button
               type="button"
               onClick={() => {
-                saveExamQuestions(questions);
+                saveExamQuestions(questions, selectedLevel);
                 router.push("/exam");
               }}
               className="flex-1 rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-600"
