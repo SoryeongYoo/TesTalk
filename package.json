@@ -10,7 +10,8 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
-    "verify:generate": "tsx apps/web/scripts/verify-generate-test-set.ts"
+    "verify:generate": "tsx apps/web/scripts/verify-generate-test-set.ts",
+    "verify:feedback": "tsx apps/web/scripts/verify-evaluate-answer.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.13",

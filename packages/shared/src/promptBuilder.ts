@@ -27,47 +27,66 @@ interface FunctionPromptInfo {
   instruction: string;
 }
 
-// Record<OpicFunction, ...> 이므로 blueprint.ts의 OPIC_FUNCTIONS에 값이 추가/제거되면
-// 이 객체도 타입 에러로 즉시 드러난다 (enum 단일 출처, CLAUDE.md 규칙 5).
+/**
+ * function별 사람이 읽는 한글 라벨. 세트 생성 프롬프트(FUNCTION_PROMPT_INFO)와
+ * 피드백 채점 프롬프트(feedbackPromptBuilder.ts)가 같은 라벨을 공유하도록 여기서만
+ * 정의한다 — 두 곳에 라벨을 각자 나열하면 표현이 갈라질 수 있어서다.
+ *
+ * Record<OpicFunction, ...> 이므로 blueprint.ts의 OPIC_FUNCTIONS에 값이 추가/제거되면
+ * 이 객체도 타입 에러로 즉시 드러난다 (enum 단일 출처, CLAUDE.md 규칙 5).
+ */
+export const OPIC_FUNCTION_LABELS: Record<OpicFunction, string> = {
+  intro: "자기소개(Self-Introduction)",
+  description: "묘사(Description)",
+  habit: "습관·루틴(Habit)",
+  comparison: "비교(Comparison)",
+  past_experience: "과거 경험(Past Experience)",
+  roleplay_ask: "질문하기(Ask Questions)",
+  roleplay_solve: "문제 해결(Solve a Problem)",
+  roleplay_experience: "관련 경험(Related Experience)",
+  advanced_compare: "비교/변화(Comparison)",
+  advanced_issue: "이슈/트렌드(Issue)",
+};
+
 const FUNCTION_PROMPT_INFO: Record<OpicFunction, FunctionPromptInfo> = {
   intro: {
-    label: "자기소개(Self-Introduction)",
+    label: OPIC_FUNCTION_LABELS.intro,
     instruction: "이름을 밝히지 않고 자연스럽게 자기소개를 하도록 유도한다.",
   },
   description: {
-    label: "묘사(Description)",
+    label: OPIC_FUNCTION_LABELS.description,
     instruction: "대상(장소·사물·사람)을 최대한 구체적으로 묘사하도록 유도한다.",
   },
   habit: {
-    label: "습관·루틴(Habit)",
+    label: OPIC_FUNCTION_LABELS.habit,
     instruction: "평소 반복하는 행동이나 루틴을 순서대로 구체적으로 말하도록 유도한다.",
   },
   comparison: {
-    label: "비교(Comparison)",
+    label: OPIC_FUNCTION_LABELS.comparison,
     instruction: "과거와 현재, 또는 서로 다른 두 대상을 비교해서 차이를 설명하도록 유도한다.",
   },
   past_experience: {
-    label: "과거 경험(Past Experience)",
+    label: OPIC_FUNCTION_LABELS.past_experience,
     instruction: "기억에 남는 구체적인 일화를 시간·장소·인물과 함께 말하도록 유도한다.",
   },
   roleplay_ask: {
-    label: "질문하기(Ask Questions)",
+    label: OPIC_FUNCTION_LABELS.roleplay_ask,
     instruction: "주어진 상황에서 필요한 정보를 얻기 위한 질문 3~4개를 하도록 지시한다.",
   },
   roleplay_solve: {
-    label: "문제 해결(Solve a Problem)",
+    label: OPIC_FUNCTION_LABELS.roleplay_solve,
     instruction: "돌발 상황을 제시하고, 전화를 걸어 대안을 2~3개 제시하도록 지시한다.",
   },
   roleplay_experience: {
-    label: "관련 경험(Related Experience)",
+    label: OPIC_FUNCTION_LABELS.roleplay_experience,
     instruction: "롤플레이 상황과 비슷했던 실제 경험을 이야기하도록 유도한다.",
   },
   advanced_compare: {
-    label: "비교/변화(Comparison)",
+    label: OPIC_FUNCTION_LABELS.advanced_compare,
     instruction: "같은 주제를 과거와 현재로 비교해 변화를 상세히 설명하도록 유도한다.",
   },
   advanced_issue: {
-    label: "이슈/트렌드(Issue)",
+    label: OPIC_FUNCTION_LABELS.advanced_issue,
     instruction: "주제와 관련된 사회적 이슈나 트렌드에 대한 의견을 묻는다.",
   },
 };

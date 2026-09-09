@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { ExamSession } from "@testalk/shared";
-import { loadExamSession, clearExamSession } from "@/lib/client/examSessionStore";
+import type { AnswerFeedback, ExamSession } from "@testalk/shared";
+import { loadExamSession, clearExamSession, saveExamSession } from "@/lib/client/examSessionStore";
 import { loadExamQuestions } from "@/lib/client/examQuestionsStore";
 import { isSpeechSynthesisSupported, speak, cancelSpeech } from "@/lib/client/speech";
 import { ReviewQuestionCard } from "@/components/result/ReviewQuestionCard";
@@ -42,6 +42,20 @@ export default function ResultPage() {
       });
     };
   }, []);
+
+  // 문항 하나에 새 피드백이 도착하면 세션 state에 반영하고, 새로고침해도 남도록
+  // sessionStorage에도 다시 저장한다 (다른 필드는 그대로 두고 이 문항만 교체).
+  function handleFeedbackReceived(slotNo: number, feedback: AnswerFeedback) {
+    setSession((prev) => {
+      if (!prev) return prev;
+      const next: ExamSession = {
+        ...prev,
+        questions: prev.questions.map((q) => (q.slot_no === slotNo ? { ...q, feedback } : q)),
+      };
+      saveExamSession(next);
+      return next;
+    });
+  }
 
   function playQuestionAudio(slotNo: number, textEn: string) {
     if (!isSpeechSynthesisSupported()) return;
@@ -141,6 +155,7 @@ export default function ResultPage() {
               question={question}
               isSpeaking={activeSpeakingSlot === question.slot_no}
               onPlayQuestion={() => playQuestionAudio(question.slot_no, question.text_en)}
+              onFeedbackReceived={(feedback) => handleFeedbackReceived(question.slot_no, feedback)}
             />
           ))}
         </ul>

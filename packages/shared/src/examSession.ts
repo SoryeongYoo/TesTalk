@@ -1,5 +1,8 @@
 import type { OpicDifficultyLevel } from "./difficulty";
+import type { AnswerFeedback } from "./feedback";
 import type { OpicQuestion } from "./schema";
+
+export type { AnswerFeedback } from "./feedback";
 
 /**
  * 문항 하나에 대한 답변 녹음을 재생하기 위한 참조.
@@ -13,12 +16,6 @@ export interface AnswerRecordingRef {
   mimeType: string;
   durationSeconds: number;
 }
-
-/**
- * AI 채점 피드백. 다음 단계(피드백 파이프라인)에서 구체적인 필드가 정해진다 — 지금은
- * 자리만 잡아둔 placeholder라 내용이 없다. 채워지기 시작하면 이 자리에 필드를 추가한다.
- */
-export type AnswerFeedback = Record<string, never>;
 
 /** 세션 안의 문항 하나 — blueprint 문항 원본 + 이 사용자의 녹음(있다면) + AI 피드백(있다면). */
 export interface ExamSessionQuestion extends OpicQuestion {

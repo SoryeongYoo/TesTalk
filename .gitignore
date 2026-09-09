@@ -26,3 +26,4 @@ pnpm-debug.log*
 
 # verify script output
 apps/web/scripts/last-output.txt
+apps/web/scripts/last-feedback-output.txt
