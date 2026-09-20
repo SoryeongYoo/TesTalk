@@ -7,6 +7,7 @@ import { loadExamSession, clearExamSession, saveExamSession } from "@/lib/client
 import { loadExamQuestions } from "@/lib/client/examQuestionsStore";
 import { isSpeechSynthesisSupported, speak, cancelSpeech } from "@/lib/client/speech";
 import { ReviewQuestionCard } from "@/components/result/ReviewQuestionCard";
+import { getCreditBalance } from "@/app/actions/getCreditBalance";
 
 function formatDuration(ms: number): string {
   const totalSeconds = Math.max(0, Math.round(ms / 1000));
@@ -21,6 +22,15 @@ export default function ResultPage() {
   // undefined면 아직 sessionStorage를 확인 중 — null(결과 없음)과 구분한다.
   const [session, setSession] = useState<ExamSession | null | undefined>(undefined);
   const [activeSpeakingSlot, setActiveSpeakingSlot] = useState<number | null>(null);
+  // undefined면 아직 서버에서 잔액을 가져오는 중 — 피드백을 받을 때마다 서버가 돌려준
+  // 최신 잔액으로 갱신되므로(낙관적 업데이트 아님), 환불이 일어나도 항상 정확하다.
+  const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
+
+  useEffect(() => {
+    getCreditBalance()
+      .then(setCreditBalance)
+      .catch(() => setCreditBalance(undefined));
+  }, []);
 
   // 언마운트 시(다시 풀기/새 시험 만들기/다른 페이지로 이동 등 어떤 경로든) 더 이상
   // 재생할 일이 없는 이 세션의 녹음 Blob URL을 정리한다. cleanup 클로저가 마운트 시점의
@@ -128,6 +138,12 @@ export default function ResultPage() {
                 <p className="mt-0.5 text-lg font-bold text-slate-800">{durationLabel}</p>
               </div>
             )}
+            {creditBalance !== undefined && (
+              <div>
+                <p className="text-xs font-semibold text-slate-400">남은 크레딧</p>
+                <p className="mt-0.5 text-lg font-bold text-slate-800">{creditBalance}개</p>
+              </div>
+            )}
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2">
@@ -156,6 +172,7 @@ export default function ResultPage() {
               isSpeaking={activeSpeakingSlot === question.slot_no}
               onPlayQuestion={() => playQuestionAudio(question.slot_no, question.text_en)}
               onFeedbackReceived={(feedback) => handleFeedbackReceived(question.slot_no, feedback)}
+              onCreditBalanceChanged={setCreditBalance}
             />
           ))}
         </ul>

@@ -15,6 +15,8 @@ interface ReviewQuestionCardProps {
   onPlayQuestion: () => void;
   /** 이 문항의 피드백을 새로 받았을 때 부모(ExamSession)에 반영하기 위한 콜백. */
   onFeedbackReceived: (feedback: AnswerFeedback) => void;
+  /** 크레딧 차감/환불 후 최신 잔액을 부모(잔액 표시 UI)에 반영하기 위한 콜백. */
+  onCreditBalanceChanged: (balance: number) => void;
 }
 
 /**
@@ -29,12 +31,14 @@ export function ReviewQuestionCard({
   isSpeaking,
   onPlayQuestion,
   onFeedbackReceived,
+  onCreditBalanceChanged,
 }: ReviewQuestionCardProps) {
   const slotLabel = getBlueprintSlot(question.slot_no)?.label ?? question.function;
 
   const [answerText, setAnswerText] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [insufficientCredits, setInsufficientCredits] = useState(false);
 
   async function handleGetFeedback() {
     const trimmed = answerText.trim();
@@ -42,15 +46,19 @@ export function ReviewQuestionCard({
 
     setStatus("loading");
     setErrorMessage("");
+    setInsufficientCredits(false);
     try {
-      const feedback = await evaluateAnswer(
+      const { feedback, creditBalance } = await evaluateAnswer(
         { function: question.function, topic: question.topic, text_en: question.text_en },
         trimmed,
       );
       onFeedbackReceived(feedback);
+      onCreditBalanceChanged(creditBalance);
       setStatus("idle");
     } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.");
+      const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
+      setErrorMessage(message);
+      setInsufficientCredits(message.includes("크레딧이 부족합니다"));
       setStatus("error");
     }
   }
@@ -108,9 +116,19 @@ export function ReviewQuestionCard({
               className="mt-2 w-full rounded-xl border-2 border-slate-200 p-3 text-sm text-slate-800 outline-none focus:border-emerald-400 disabled:bg-slate-100"
             />
             {status === "error" && (
-              <p className="mt-2 whitespace-pre-wrap break-words text-xs font-medium text-red-500">
-                {errorMessage}
-              </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <p className="whitespace-pre-wrap break-words text-xs font-medium text-red-500">{errorMessage}</p>
+                {insufficientCredits && (
+                  <button
+                    type="button"
+                    disabled
+                    title="크레딧 충전은 준비 중입니다."
+                    className="cursor-not-allowed rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-400"
+                  >
+                    충전하기 (준비 중)
+                  </button>
+                )}
+              </div>
             )}
             <button
               type="button"

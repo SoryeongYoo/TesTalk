@@ -14,7 +14,8 @@
     "verify:feedback": "tsx apps/web/scripts/verify-evaluate-answer.ts",
     "verify:db": "tsx apps/web/scripts/verify-db-connection.ts",
     "db:generate": "pnpm --filter web run db:generate",
-    "db:migrate": "pnpm --filter web run db:migrate"
+    "db:migrate": "pnpm --filter web run db:migrate",
+    "add-credits": "tsx apps/web/scripts/add-credits.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.13",
