@@ -11,7 +11,10 @@
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
     "verify:generate": "tsx apps/web/scripts/verify-generate-test-set.ts",
-    "verify:feedback": "tsx apps/web/scripts/verify-evaluate-answer.ts"
+    "verify:feedback": "tsx apps/web/scripts/verify-evaluate-answer.ts",
+    "verify:db": "tsx apps/web/scripts/verify-db-connection.ts",
+    "db:generate": "pnpm --filter web run db:generate",
+    "db:migrate": "pnpm --filter web run db:migrate"
   },
   "devDependencies": {
     "tsx": "^4.23.13",
