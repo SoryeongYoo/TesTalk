@@ -7,15 +7,15 @@ applications:
           commands:
             - corepack enable
             - corepack prepare pnpm@9.7.0 --activate
-            # $CODEBUILD_SRC_DIR = 체크아웃된 repo 루트의 절대경로.
-            # 상대경로 cd ../..는 이전 phase의 cd가 누적/유지되는 경우
-            # repo 밖으로 나가버려 ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND를
-            # 유발할 수 있어 절대경로로 고정한다. cd와 실행 명령은 반드시
-            # 한 줄(&&)로 묶어야 같은 셸에서 실행된다.
-            - cd $CODEBUILD_SRC_DIR && pnpm install --frozen-lockfile
+            # appRoot(apps/web)에서 phase가 시작되므로 repo 루트는 두 단계 위.
+            # 실제 빌드 로그로 확인됨: 이 Amplify 환경의 $CODEBUILD_SRC_DIR은
+            # repo 루트가 아니라 그 부모 디렉터리(.../src)를 가리켜 package.json을
+            # 못 찾았다 (ERR_PNPM_NO_PKG_MANIFEST) — 상대경로가 맞는 방식이었다.
+            # cd와 실행 명령은 반드시 한 줄(&&)로 묶어야 같은 셸에서 실행된다.
+            - cd ../.. && pnpm install --frozen-lockfile
         build:
           commands:
-            - cd $CODEBUILD_SRC_DIR && pnpm turbo run build --filter=web
+            - cd ../.. && pnpm turbo run build --filter=web
       artifacts:
         # appRoot 기준 상대 경로 -> 실제로는 apps/web/.next
         # next.config.mjs의 output: "standalone" 설정을 Amplify의 Next.js
