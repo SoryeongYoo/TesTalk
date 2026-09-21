@@ -31,3 +31,29 @@ export function assertFifteenQuestionMode(
     );
   }
 }
+
+/** Self-Assessment 난이도 카드 하나에 필요한 정보. */
+export interface OpicDifficultyLevelInfo {
+  level: OpicDifficultyLevel;
+  /** 카드에 노출할 짧은 "할 수 있는 것" 설명. */
+  description: string;
+  /**
+   * 지금 실제로 선택 가능한지. false면 blueprint가 아직 이 난이도(1~2단계, 12문항
+   * 모드)를 지원하지 않는다는 뜻 — 화면은 이 값으로 카드를 비활성 처리하고
+   * "준비 중"을 안내한다 (참고: docs/PLAN.md 2-4, `assertFifteenQuestionMode`).
+   */
+  supported: boolean;
+}
+
+/**
+ * Self-Assessment 1~6단계 카드 데이터. 화면(apps/web)은 이 배열을 그대로 렌더링만
+ * 하고, 단계 번호·설명·지원 여부를 자체적으로 다시 정의하지 않는다.
+ */
+export const OPIC_DIFFICULTY_LEVELS: readonly OpicDifficultyLevelInfo[] = [
+  { level: 1, description: "간단한 단어로 겨우 답할 수 있어요.", supported: false },
+  { level: 2, description: "쉬운 문장으로 기본적인 정보를 주고받을 수 있어요.", supported: false },
+  { level: 3, description: "일상 주제를 문장으로 말할 수 있어요.", supported: true },
+  { level: 4, description: "일상 주제를 문단으로 자신 있게 말할 수 있어요.", supported: true },
+  { level: 5, description: "다양한 주제를 논리적으로 설명할 수 있어요.", supported: true },
+  { level: 6, description: "복잡한 주제도 유창하고 정교하게 표현할 수 있어요.", supported: true },
+];

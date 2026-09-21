@@ -1,0 +1,30 @@
+version: 1
+applications:
+  - appRoot: apps/web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - corepack enable
+            - corepack prepare pnpm@9.7.0 --activate
+            # $CODEBUILD_SRC_DIR = 체크아웃된 repo 루트의 절대경로.
+            # 상대경로 cd ../..는 이전 phase의 cd가 누적/유지되는 경우
+            # repo 밖으로 나가버려 ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND를
+            # 유발할 수 있어 절대경로로 고정한다. cd와 실행 명령은 반드시
+            # 한 줄(&&)로 묶어야 같은 셸에서 실행된다.
+            - cd $CODEBUILD_SRC_DIR && pnpm install --frozen-lockfile
+        build:
+          commands:
+            - cd $CODEBUILD_SRC_DIR && pnpm turbo run build --filter=web
+      artifacts:
+        # appRoot 기준 상대 경로 -> 실제로는 apps/web/.next
+        # next.config.mjs의 output: "standalone" 설정을 Amplify의 Next.js
+        # SSR 컴퓨트 플랫폼이 .next 디렉터리를 통해 자동으로 인식/패키징한다.
+        # .next/standalone으로 baseDirectory를 바꾸지 말 것 (public/static 누락됨).
+        baseDirectory: .next
+        files:
+          - "**/*"
+      cache:
+        paths:
+          - ../../node_modules/**/*
+          - .next/cache/**/*
