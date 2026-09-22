@@ -7,15 +7,17 @@ applications:
           commands:
             - corepack enable
             - corepack prepare pnpm@9.7.0 --activate
-            # appRoot(apps/web)에서 phase가 시작되므로 repo 루트는 두 단계 위.
-            # 실제 빌드 로그로 확인됨: 이 Amplify 환경의 $CODEBUILD_SRC_DIR은
-            # repo 루트가 아니라 그 부모 디렉터리(.../src)를 가리켜 package.json을
-            # 못 찾았다 (ERR_PNPM_NO_PKG_MANIFEST) — 상대경로가 맞는 방식이었다.
-            # cd와 실행 명령은 반드시 한 줄(&&)로 묶어야 같은 셸에서 실행된다.
-            - cd ../.. && pnpm install --frozen-lockfile
+            # 상대경로 cd(../..)는 phase마다 시작 cwd가 달라 누적 오차가 생겼다
+            # (preBuild는 appRoot에서 시작하지만, build는 preBuild가 끝난 cwd를
+            # 이어받아 이미 repo 루트인 상태에서 다시 두 단계 올라가
+            # ERR_PNPM_NO_IMPORTER_MANIFEST_FOUND가 발생함, 실제 빌드 로그로 확인).
+            # 그래서 각 phase 첫 명령에서 현재 cwd 기준으로 pnpm-workspace.yaml이
+            # 있는 지점까지 위로 탐색해 repo 루트 절대경로를 찾는다 — 시작 cwd가
+            # 어디든(appRoot든 이미 루트든) 항상 같은 위치로 수렴한다.
+            - ROOT_DIR=$(pwd); while [ ! -f "$ROOT_DIR/pnpm-workspace.yaml" ] && [ "$ROOT_DIR" != "/" ]; do ROOT_DIR=$(dirname "$ROOT_DIR"); done; cd "$ROOT_DIR" && pnpm install --frozen-lockfile
         build:
           commands:
-            - cd ../.. && pnpm turbo run build --filter=web
+            - ROOT_DIR=$(pwd); while [ ! -f "$ROOT_DIR/pnpm-workspace.yaml" ] && [ "$ROOT_DIR" != "/" ]; do ROOT_DIR=$(dirname "$ROOT_DIR"); done; cd "$ROOT_DIR" && pnpm turbo run build --filter=web
       artifacts:
         # appRoot 기준 상대 경로 -> 실제로는 apps/web/.next
         # next.config.mjs의 output: "standalone" 설정을 Amplify의 Next.js
