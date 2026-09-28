@@ -8,6 +8,11 @@ import { upsertUserOnLogin } from "./lib/server/db/upsertUser";
  * 클라이언트 번들에는 포함되지 않는다.
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  // Amplify(CloudFront) 프록시 뒤에서는 서버가 자기 호스트를 localhost:3000으로
+  // 인식해 UntrustedHost로 거부된다. X-Forwarded-Host를 신뢰하도록 config에 직접
+  // 명시한다 — AUTH_TRUST_HOST 환경변수는 Amplify SSR 런타임에 전달이 보장되지 않는다.
+  // 로컬 dev(NODE_ENV=development)는 원래 host를 신뢰하므로 동작 변화 없음.
+  trustHost: true,
   providers: [
     Cognito({
       clientId: process.env.COGNITO_CLIENT_ID,
