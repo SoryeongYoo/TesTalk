@@ -11,9 +11,11 @@ build/
 # turbo
 .turbo/
 
-# env
+# env — 비밀값 파일은 절대 커밋하지 않는다. .env.production은 Amplify 빌드 중
+# 환경변수로부터 생성된다(amplify.yml). 템플릿인 .env.example만 트래킹한다.
 .env
-.env*.local
+.env.*
+!.env.example
 
 # logs
 *.log
