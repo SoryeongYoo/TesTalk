@@ -1,0 +1,40 @@
+# =============================================================================
+# Terraform .gitignore
+# state 파일에는 리소스 ID와 설정값(향후 DB 비밀번호 등)이 평문으로 저장된다.
+# 절대 커밋하지 않는다.
+# =============================================================================
+
+# provider 플러그인·모듈 캐시 (terraform init 이 다운로드)
+.terraform/
+
+# state 파일과 백업 (terraform.tfstate, terraform.tfstate.backup, *.tfstate.*.backup 등)
+*.tfstate
+*.tfstate.*
+
+# state 잠금 정보
+.terraform.tfstate.lock.info
+
+# 변수 값 파일 — 비밀값이 들어갈 수 있음. 예시가 필요하면 *.tfvars.example로 만든다.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
+# 로컬 개발용 override 파일
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# plan 결과 파일 (terraform plan -out=...) — state와 같은 민감정보를 포함할 수 있음
+*.tfplan
+tfplan
+
+# crash 로그
+crash.log
+crash.*.log
+
+# CLI 설정 파일 (토큰이 들어갈 수 있음)
+.terraformrc
+terraform.rc
+
+# 참고: .terraform.lock.hcl 은 provider 버전을 고정하는 파일이라 커밋하는 것이 권장된다.

@@ -1,0 +1,14 @@
+# terraform.tfvars 예시 파일 (이 파일은 커밋됨 — 실제 값 넣지 말 것)
+#
+# 사용법:
+#   1) 이 파일을 terraform.tfvars 로 복사한다 (terraform.tfvars 는 .gitignore로 제외됨)
+#   2) 아래 값을 실제 값으로 바꾼다
+#   terraform 명령은 같은 폴더의 terraform.tfvars 를 자동으로 읽는다.
+
+# 필수: RDS 마스터 비밀번호 (8~128자, / @ " 공백 불가)
+db_password = "CHANGE_ME"
+
+# 선택: 기본값을 바꾸고 싶을 때만
+# db_username                   = "testalk_admin"
+# db_name                       = "testalk"
+# db_allowed_security_group_ids = ["sg-xxxxxxxx"]
