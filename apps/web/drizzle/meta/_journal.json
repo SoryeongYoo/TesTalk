@@ -8,6 +8,20 @@
       "when": 1789648466048,
       "tag": "0000_bizarre_sphinx",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791543040402,
+      "tag": "0001_dear_ender_wiggin",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791543222751,
+      "tag": "0002_stiff_fenris",
+      "breakpoints": true
     }
   ]
 }

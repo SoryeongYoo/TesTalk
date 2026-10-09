@@ -6,6 +6,7 @@ import {
   type EvaluateAnswerQuestion,
 } from "@testalk/shared";
 import { getAnthropicClient } from "./anthropicClient";
+import { logTokenUsage } from "./tokenUsage";
 
 /**
  * "답변 텍스트 → 평가" 피드백 엔진의 유일한 진입점.
@@ -63,6 +64,8 @@ export async function evaluateAnswer(
         max_tokens: MAX_OUTPUT_TOKENS,
         messages: [{ role: "user", content: prompt }],
       });
+      // 파싱/스키마 검증 전에 기록한다 — 버려지는 응답도 토큰은 과금된다.
+      logTokenUsage("evaluateAnswer", FEEDBACK_MODEL, message.usage, { attempt });
       const raw = parseJsonLoose(extractResponseText(message));
       const parsed = AnswerFeedbackSchema.safeParse(raw);
 

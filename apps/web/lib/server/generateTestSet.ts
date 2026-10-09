@@ -15,6 +15,12 @@ import {
   type TopicAllocationGroup,
 } from "@testalk/shared";
 import { getAnthropicClient } from "./anthropicClient";
+import {
+  createTokenUsageTotals,
+  logTokenUsage,
+  logTokenUsageTotals,
+  type TokenUsageTotals,
+} from "./tokenUsage";
 
 /**
  * 세트 단위 AI 생성 + 병합 + 검증 파이프라인.
@@ -70,6 +76,23 @@ export async function generateTestSet(
   surveyTopics: readonly string[],
   difficulty: OpicDifficultyLevel,
 ): Promise<GenerateTestSetResult> {
+  // 성공/실패와 무관하게 이 생성 1회에 쓴 토큰 합계를 남긴다 (실패한 라운드도 과금된다).
+  const usageTotals = createTokenUsageTotals();
+  let succeeded = false;
+  try {
+    const result = await runGeneration(surveyTopics, difficulty, usageTotals);
+    succeeded = true;
+    return result;
+  } finally {
+    logTokenUsageTotals("generateTestSet", CLAUDE_MODEL, usageTotals, { difficulty, succeeded });
+  }
+}
+
+async function runGeneration(
+  surveyTopics: readonly string[],
+  difficulty: OpicDifficultyLevel,
+  usageTotals: TokenUsageTotals,
+): Promise<GenerateTestSetResult> {
   const client = getAnthropicClient();
 
   console.log(
@@ -111,6 +134,8 @@ export async function generateTestSet(
           slotsByGroup[group],
           allocation[group],
           difficulty,
+          round,
+          usageTotals,
         ),
       ),
     );
@@ -204,6 +229,8 @@ async function requestSetQuestions(
   slots: readonly BlueprintSlot[],
   allocation: TopicAllocationEntry,
   difficulty: OpicDifficultyLevel,
+  round: number,
+  usageTotals: TokenUsageTotals,
 ): Promise<OpicQuestion[]> {
   const prompt = buildSetPrompt(group, allocation.topic, allocation.source, difficulty);
 
@@ -215,6 +242,8 @@ async function requestSetQuestions(
         max_tokens: MAX_OUTPUT_TOKENS,
         messages: [{ role: "user", content: prompt }],
       });
+      // 파싱 전에 기록한다 — 파싱에 실패해 버리는 응답도 토큰은 과금된다.
+      logTokenUsage("generateTestSet", CLAUDE_MODEL, message.usage, { group, round, attempt: attempt + 1 }, usageTotals);
       const raw = parseJsonLoose(extractResponseText(message));
       return shapeSetQuestions(group, slots, allocation, raw);
     } catch (err) {

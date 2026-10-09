@@ -9,13 +9,15 @@ import {
   type OpicQuestion,
 } from "@testalk/shared";
 import { generateTestSet } from "@/app/actions/generateTestSet";
+import { signInToGenerate } from "@/app/actions/signIn";
 import { loadSurveyTopics } from "@/lib/client/surveyTopicsStore";
 import { saveExamQuestions } from "@/lib/client/examQuestionsStore";
 import { LevelCard } from "@/components/level/LevelCard";
 import { QuestionCard } from "@/components/level/QuestionCard";
 
 /** 이 화면이 지금 보여주는 단계. */
-type ViewState = "select" | "loading" | "result" | "error";
+/** login_required/limit_reached는 생성 게이트에 막힌 상태 — Claude 호출 없이 바로 돌아온다. */
+type ViewState = "select" | "loading" | "result" | "error" | "login_required" | "limit_reached";
 
 export default function LevelPage() {
   const router = useRouter();
@@ -26,6 +28,8 @@ export default function LevelPage() {
   const [view, setView] = useState<ViewState>("select");
   const [questions, setQuestions] = useState<OpicQuestion[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
+  /** 오늘 생성 사용량. 생성 성공/한도 초과 응답에서 채워진다. */
+  const [dailyUsage, setDailyUsage] = useState<{ used: number; limit: number } | null>(null);
 
   useEffect(() => {
     setSurveyTopics(loadSurveyTopics());
@@ -36,7 +40,18 @@ export default function LevelPage() {
     setView("loading");
     setErrorMessage("");
     try {
-      const result = await generateTestSet(surveyTopics, selectedLevel);
+      const response = await generateTestSet(surveyTopics, selectedLevel);
+      if (response.status === "login_required") {
+        setView("login_required");
+        return;
+      }
+      if (response.status === "daily_limit_reached") {
+        setDailyUsage({ used: response.limit, limit: response.limit });
+        setView("limit_reached");
+        return;
+      }
+      const { result } = response;
+      setDailyUsage({ used: response.used, limit: response.limit });
       if (!result.valid) {
         throw new Error(
           `검증을 통과하지 못했습니다 (issues ${result.issues.length}건). 다시 시도해주세요.`,
@@ -89,6 +104,49 @@ export default function LevelPage() {
     );
   }
 
+  if (view === "login_required") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-50 to-white p-6">
+        <div className="w-full max-w-md rounded-3xl border-2 border-emerald-100 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-slate-800">로그인하고 시험을 만들어보세요</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            AI 문제 생성은 로그인한 사용자만 이용할 수 있어요. 로그인하면 하루 몇 번씩 무료로
+            새 시험을 만들 수 있어요.
+          </p>
+          <form action={signInToGenerate} className="mt-6">
+            <button
+              type="submit"
+              className="rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-600"
+            >
+              로그인하기
+            </button>
+          </form>
+        </div>
+      </main>
+    );
+  }
+
+  if (view === "limit_reached") {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-50 to-white p-6">
+        <div className="w-full max-w-md rounded-3xl border-2 border-amber-100 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-xl font-bold text-slate-800">오늘 무료 생성 횟수를 다 썼어요</h1>
+          <p className="mt-2 text-sm text-slate-500">
+            시험은 하루 {dailyUsage?.limit ?? 0}번까지 무료로 만들 수 있어요.
+            <br />
+            내일(한국 시간 자정 이후) 다시 만들어주세요.
+          </p>
+          <Link
+            href="/"
+            className="mt-6 inline-block rounded-full border-2 border-slate-200 px-6 py-2.5 text-sm font-semibold text-slate-500 transition-colors hover:border-slate-300 hover:text-slate-700"
+          >
+            홈으로
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   if (view === "error") {
     return (
       <main className="flex min-h-screen items-center justify-center bg-gradient-to-b from-emerald-50 to-white p-6">
@@ -118,6 +176,11 @@ export default function LevelPage() {
         <div className="w-full max-w-2xl flex-1 px-6 pb-32 pt-10">
           <h1 className="text-2xl font-bold text-slate-800">생성된 문항 {questions.length}개</h1>
           <p className="mt-1 text-sm text-slate-500">녹음 기능은 아직 없어요 — 문항을 하나씩 확인만 할 수 있어요.</p>
+          {dailyUsage && (
+            <p className="mt-2 inline-flex rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+              오늘 남은 무료 생성 {Math.max(dailyUsage.limit - dailyUsage.used, 0)}회
+            </p>
+          )}
           <ul className="mt-6 flex flex-col gap-3">
             {questions.map((question) => (
               <QuestionCard key={question.slot_no} question={question} />

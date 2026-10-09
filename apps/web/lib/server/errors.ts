@@ -17,3 +17,13 @@ export class InsufficientCreditsError extends Error {
     this.name = "InsufficientCreditsError";
   }
 }
+
+export class DailyGenerationLimitError extends Error {
+  constructor(
+    readonly limit: number,
+    message = "오늘 무료 생성 횟수를 다 썼어요.",
+  ) {
+    super(message);
+    this.name = "DailyGenerationLimitError";
+  }
+}
