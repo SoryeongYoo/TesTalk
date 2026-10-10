@@ -56,7 +56,7 @@ export default function ExamPage() {
     // surveyTopics는 이 화면에선 필수가 아니다(결과 화면에 참고용으로만 쓰임) —
     // 없어도 빈 배열로 진행한다.
     const surveyTopics = loadSurveyTopics() ?? [];
-    setSession(createExamSession(setup.difficulty, surveyTopics, setup.questions));
+    setSession(createExamSession(setup.difficulty, surveyTopics, setup.questions, setup.gradedExamId));
   }, []);
 
   const current = session ? session.questions[currentIndex] : undefined;

@@ -17,12 +17,18 @@ const STORAGE_KEY = "testalk:examQuestions";
 export interface ExamSetup {
   difficulty: OpicDifficultyLevel;
   questions: OpicQuestion[];
+  /** 크레딧 채점 응시면 서버 graded_exams id. 없으면 무료 연습(피드백 잠금). */
+  gradedExamId?: string;
 }
 
-/** 생성이 끝난 15문항과 그때 고른 난이도를 저장한다. */
-export function saveExamQuestions(questions: readonly OpicQuestion[], difficulty: OpicDifficultyLevel): void {
+/** 생성이 끝난 15문항과 그때 고른 난이도(+ 채점 응시 id)를 저장한다. */
+export function saveExamQuestions(
+  questions: readonly OpicQuestion[],
+  difficulty: OpicDifficultyLevel,
+  gradedExamId?: string,
+): void {
   try {
-    const payload: ExamSetup = { difficulty, questions: [...questions] };
+    const payload: ExamSetup = { difficulty, questions: [...questions], ...(gradedExamId ? { gradedExamId } : {}) };
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   } catch {
     // 프라이빗 모드 등 — 조용히 무시. /exam에서 loadExamQuestions()가 null을 받아
@@ -42,14 +48,18 @@ export function loadExamQuestions(): ExamSetup | null {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== "object" || parsed === null) return null;
 
-    const { difficulty, questions } = parsed as Partial<ExamSetup>;
+    const { difficulty, questions, gradedExamId } = parsed as Partial<ExamSetup>;
     if (typeof difficulty !== "number" || !Number.isInteger(difficulty) || difficulty < 1 || difficulty > 6) {
       return null;
     }
     const questionsResult = OpicQuestionSetSchema.safeParse(questions);
     if (!questionsResult.success) return null;
 
-    return { difficulty: difficulty as OpicDifficultyLevel, questions: questionsResult.data };
+    return {
+      difficulty: difficulty as OpicDifficultyLevel,
+      questions: questionsResult.data,
+      ...(typeof gradedExamId === "string" ? { gradedExamId } : {}),
+    };
   } catch {
     return null;
   }

@@ -4,7 +4,7 @@ import { generateTestSet, type GenerateTestSetResult } from "./generateTestSet";
 import { refundDailyGeneration, tryConsumeDailyGeneration } from "./generationLimit";
 
 /**
- * generateTestSet()을 일일 생성 제한으로 감싼 얇은 래퍼 (evaluateAnswerWithCredit과 같은 구조).
+ * generateTestSet()을 일일 생성 제한으로 감싼 얇은 래퍼 (gradedExam.ts의 크레딧 차감 → 실패 시 환불과 같은 구조).
  *
  * 1) 오늘 횟수가 한도 미만이면 원자적으로 +1 (tryConsumeDailyGeneration) — 한도 초과면
  *    generateTestSet을 아예 호출하지 않는다 (Claude API 비용 0).

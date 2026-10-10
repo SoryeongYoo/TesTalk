@@ -18,6 +18,22 @@ export class InsufficientCreditsError extends Error {
   }
 }
 
+/** 무료 연습 시험(또는 남의/존재하지 않는 응시)으로 피드백을 요청한 경우. */
+export class FeedbackLockedError extends Error {
+  constructor(message = "피드백은 크레딧으로 채점 응시한 시험에서만 받을 수 있어요.") {
+    super(message);
+    this.name = "FeedbackLockedError";
+  }
+}
+
+/** 같은 채점 응시의 같은 문항에 대해 피드백을 이미 받은 경우 (응시당 문항별 1회). */
+export class FeedbackAlreadyUsedError extends Error {
+  constructor(message = "이 문항은 이미 피드백을 받았어요.") {
+    super(message);
+    this.name = "FeedbackAlreadyUsedError";
+  }
+}
+
 export class DailyGenerationLimitError extends Error {
   constructor(
     readonly limit: number,

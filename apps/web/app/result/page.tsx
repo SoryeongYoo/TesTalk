@@ -22,8 +22,8 @@ export default function ResultPage() {
   // undefined면 아직 sessionStorage를 확인 중 — null(결과 없음)과 구분한다.
   const [session, setSession] = useState<ExamSession | null | undefined>(undefined);
   const [activeSpeakingSlot, setActiveSpeakingSlot] = useState<number | null>(null);
-  // undefined면 아직 서버에서 잔액을 가져오는 중 — 피드백을 받을 때마다 서버가 돌려준
-  // 최신 잔액으로 갱신되므로(낙관적 업데이트 아님), 환불이 일어나도 항상 정확하다.
+  // undefined면 아직 서버에서 잔액을 가져오는 중. 크레딧은 응시 시작(생성) 때 차감되고
+  // 피드백으로는 바뀌지 않으므로, 진입 시 한 번만 조회한다.
   const [creditBalance, setCreditBalance] = useState<number | undefined>(undefined);
 
   useEffect(() => {
@@ -169,10 +169,10 @@ export default function ResultPage() {
             <ReviewQuestionCard
               key={question.slot_no}
               question={question}
+              gradedExamId={session.gradedExamId}
               isSpeaking={activeSpeakingSlot === question.slot_no}
               onPlayQuestion={() => playQuestionAudio(question.slot_no, question.text_en)}
               onFeedbackReceived={(feedback) => handleFeedbackReceived(question.slot_no, feedback)}
-              onCreditBalanceChanged={setCreditBalance}
             />
           ))}
         </ul>

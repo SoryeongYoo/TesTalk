@@ -12,12 +12,12 @@ import { isSpeechRecognitionSupported } from "@/lib/client/speechRecognition";
 
 interface ReviewQuestionCardProps {
   question: ExamSessionQuestion;
+  /** 크레딧 채점 응시 id. 없으면 무료 연습 시험 — 피드백이 잠긴다. */
+  gradedExamId: string | undefined;
   isSpeaking: boolean;
   onPlayQuestion: () => void;
   /** 이 문항의 피드백을 새로 받았을 때 부모(ExamSession)에 반영하기 위한 콜백. */
   onFeedbackReceived: (feedback: AnswerFeedback) => void;
-  /** 크레딧 차감/환불 후 최신 잔액을 부모(잔액 표시 UI)에 반영하기 위한 콜백. */
-  onCreditBalanceChanged: (balance: number) => void;
 }
 
 /**
@@ -30,10 +30,10 @@ interface ReviewQuestionCardProps {
  */
 export function ReviewQuestionCard({
   question,
+  gradedExamId,
   isSpeaking,
   onPlayQuestion,
   onFeedbackReceived,
-  onCreditBalanceChanged,
 }: ReviewQuestionCardProps) {
   const slotLabel = getBlueprintSlot(question.slot_no)?.label ?? question.function;
 
@@ -41,27 +41,21 @@ export function ReviewQuestionCard({
   const [answerText, setAnswerText] = useState(question.transcript ?? "");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
-  const [insufficientCredits, setInsufficientCredits] = useState(false);
 
   async function handleGetFeedback() {
     const trimmed = answerText.trim();
-    if (trimmed.length === 0) return;
+    if (!gradedExamId || trimmed.length === 0) return;
 
     setStatus("loading");
     setErrorMessage("");
-    setInsufficientCredits(false);
     try {
-      const { feedback, creditBalance } = await evaluateAnswer(
-        { function: question.function, topic: question.topic, text_en: question.text_en },
-        trimmed,
-      );
+      // 크레딧은 응시 시작 때 이미 차감됐다 — 문항 텍스트는 서버가 응시 기록에서 slot_no로 꺼낸다.
+      const { feedback } = await evaluateAnswer(gradedExamId, question.slot_no, trimmed);
       onFeedbackReceived(feedback);
-      onCreditBalanceChanged(creditBalance);
       setStatus("idle");
     } catch (err) {
       const message = err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
       setErrorMessage(message);
-      setInsufficientCredits(message.includes("크레딧이 부족합니다"));
       setStatus("error");
     }
   }
@@ -105,6 +99,18 @@ export function ReviewQuestionCard({
 
         {question.feedback ? (
           <FeedbackResult feedback={question.feedback} />
+        ) : !gradedExamId ? (
+          <div className="mt-2 rounded-xl border-2 border-dashed border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-bold text-amber-700">🔒 무료 연습 시험은 AI 피드백이 잠겨 있어요</p>
+            <p className="mt-1 text-xs text-amber-700">
+              크레딧으로 피드백 받기 — 크레딧 1개로 채점 응시하면 15문항 전체 AI 피드백을 받을 수 있어요.
+            </p>
+            {hasTranscript && (
+              <p className="mt-3 rounded-lg bg-white px-3 py-2 text-xs leading-relaxed text-slate-600">
+                받아쓴 답변: {question.transcript}
+              </p>
+            )}
+          </div>
         ) : (
           <div className="mt-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4">
             <p className="text-xs text-slate-400">
@@ -123,19 +129,7 @@ export function ReviewQuestionCard({
               className="mt-2 w-full rounded-xl border-2 border-slate-200 p-3 text-sm text-slate-800 outline-none focus:border-emerald-400 disabled:bg-slate-100"
             />
             {status === "error" && (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <p className="whitespace-pre-wrap break-words text-xs font-medium text-red-500">{errorMessage}</p>
-                {insufficientCredits && (
-                  <button
-                    type="button"
-                    disabled
-                    title="크레딧 충전은 준비 중입니다."
-                    className="cursor-not-allowed rounded-full border border-slate-200 px-3 py-1 text-xs font-bold text-slate-400"
-                  >
-                    충전하기 (준비 중)
-                  </button>
-                )}
-              </div>
+              <p className="mt-2 whitespace-pre-wrap break-words text-xs font-medium text-red-500">{errorMessage}</p>
             )}
             <button
               type="button"

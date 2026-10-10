@@ -11,16 +11,9 @@ import { createTokenUsageTotals, logTokenUsage, logTokenUsageTotals } from "./to
 /**
  * "답변 텍스트 → 평가" 피드백 엔진의 유일한 진입점.
  *
- * ★ 유료화 대비 — 피드백을 위한 Claude API 호출은 반드시 이 함수 하나로만 모은다.
- * 나중에 크레딧 게이트("잔액 확인 → 있으면 실행+차감, 없으면 402 거부")를 붙일 때는
- * 이 함수를 감싸는 얇은 래퍼 하나만 만들면 된다 — 예를 들어:
- *
- *   async function evaluateAnswerWithCredit(userId, question, answerText) {
- *     await assertHasCredit(userId);       // 크레딧 확인 (미들웨어 성격)
- *     const feedback = await evaluateAnswer(question, answerText); // 이 함수
- *     await deductCredit(userId);          // 차감
- *     return feedback;
- *   }
+ * ★ 피드백을 위한 Claude API 호출은 반드시 이 함수 하나로만 모은다.
+ * 크레딧 게이트(채점 응시 인가, 문항별 1회)는 lib/server/gradedExam.ts의
+ * evaluateGradedAnswer가 이 함수를 감싸서 담당한다.
  *
  * 이 함수 자체는 인증/크레딧을 전혀 모른다 — 호출부(Server Action)가 여러 군데로
  * 흩어지면 게이트도 여러 번 붙여야 하므로, 새로운 화면/기능에서 피드백이 필요해도

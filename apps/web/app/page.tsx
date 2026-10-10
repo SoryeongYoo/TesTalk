@@ -94,7 +94,7 @@ export default async function Home() {
               🔓
             </div>
             <p className="flex-1 text-xs leading-relaxed text-amber-200/90 sm:text-sm">
-              설문은 <strong className="font-semibold text-amber-300">로그인 없이 체험</strong>할 수 있고, AI 문제 생성은 로그인 후 하루 {getDailyFreeGenerations()}회까지 무료입니다. 답변별 <strong className="font-semibold text-amber-300">AI 상세 피드백</strong>은 로그인 후 크레딧으로 이용할 수 있습니다. (신규 가입 시 <span className="underline underline-offset-2">{DEFAULT_SIGNUP_CREDITS} 크레딧</span> 지급)
+              설문은 <strong className="font-semibold text-amber-300">로그인 없이 체험</strong>할 수 있고, 연습 시험 생성과 말하기 연습은 로그인 후 하루 {getDailyFreeGenerations()}회까지 무료입니다. 15문항 <strong className="font-semibold text-amber-300">AI 상세 피드백</strong>은 크레딧 1개로 시험 1회를 채점 응시할 때 받을 수 있습니다. (신규 가입 시 <span className="underline underline-offset-2">{DEFAULT_SIGNUP_CREDITS} 크레딧</span> 지급)
             </p>
             <form
               action={async () => {

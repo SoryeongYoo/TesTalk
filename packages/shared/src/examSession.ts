@@ -39,6 +39,11 @@ export interface ExamSession {
   id: string;
   difficulty: OpicDifficultyLevel;
   surveyTopics: string[];
+  /**
+   * 크레딧으로 시작한 채점 응시면 서버의 graded_exams id. 없으면 무료 연습 시험이며
+   * 피드백이 잠긴다. (실제 인가는 서버가 이 id로 다시 확인한다 — 클라이언트 값은 식별용일 뿐.)
+   */
+  gradedExamId?: string;
   /** 세션 생성 시각 (ISO 8601). */
   createdAt: string;
   /** 15문항을 모두 마친 시각 (ISO 8601). 진행 중이면 아직 없다. */
@@ -62,11 +67,13 @@ export function createExamSession(
   difficulty: OpicDifficultyLevel,
   surveyTopics: readonly string[],
   questions: readonly OpicQuestion[],
+  gradedExamId?: string,
 ): ExamSession {
   return {
     id: generateSessionId(),
     difficulty,
     surveyTopics: [...surveyTopics],
+    ...(gradedExamId ? { gradedExamId } : {}),
     createdAt: new Date().toISOString(),
     questions: questions.map((q) => ({ ...q })),
   };

@@ -22,6 +22,13 @@
       "when": 1791543222751,
       "tag": "0002_stiff_fenris",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791636488192,
+      "tag": "0003_daffy_madame_masque",
+      "breakpoints": true
     }
   ]
 }

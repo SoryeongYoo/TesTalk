@@ -11,8 +11,11 @@ import { credits } from "./db/schema";
  * 나중에 붙을 토스 결제 성공 콜백(서버 라우트)에서만 호출한다.
  */
 
-/** 신규 가입자에게 지급하는 무료 크레딧 개수. 정책이 바뀌면 이 값만 수정하면 된다. */
-export const DEFAULT_SIGNUP_CREDITS = 3;
+/**
+ * 신규 가입자에게 지급하는 무료 크레딧 개수 (= 채점 응시 체험 1회).
+ * 1크레딧 = 시험 1회 채점 응시(생성 + 15문항 AI 피드백). 정책이 바뀌면 이 값만 수정하면 된다.
+ */
+export const DEFAULT_SIGNUP_CREDITS = 1;
 
 export async function getCreditBalance(userId: string): Promise<number> {
   const db = getDb();
@@ -38,7 +41,7 @@ export async function deductCredit(userId: string): Promise<boolean> {
   return updated.length > 0;
 }
 
-/** 차감 후 AI 호출이 실패했을 때 사용자 보호를 위해 크레딧 1을 되돌린다. */
+/** 차감 후 채점 응시 생성이 실패했을 때 사용자 보호를 위해 크레딧 1을 되돌린다. */
 export async function refundCredit(userId: string): Promise<void> {
   const db = getDb();
   await db
