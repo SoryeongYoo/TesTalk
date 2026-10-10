@@ -1,4 +1,5 @@
 export * from "./blueprint";
+export * from "./creditPackages";
 export * from "./difficulty";
 export * from "./examSession";
 export * from "./feedback";

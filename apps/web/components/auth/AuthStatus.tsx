@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth, signIn, signOut } from "@/auth";
 import { getCreditBalance } from "@/lib/server/credits";
 
@@ -34,9 +35,13 @@ export async function AuthStatus() {
 
   return (
     <div className="flex items-center gap-3">
-      <div className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
+      <Link
+        href="/credits"
+        className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
+      >
         크레딧 {balance}개
-      </div>
+        <span className="rounded-full bg-emerald-500 px-1.5 py-0.5 text-[10px] text-white">충전</span>
+      </Link>
       <div className="text-right">
         <p className="text-sm font-medium text-slate-700">{session.user.email}</p>
         <p className="text-xs text-slate-400">ID: {session.user.id}</p>

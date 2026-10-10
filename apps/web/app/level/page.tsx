@@ -192,14 +192,12 @@ export default function LevelPage() {
               </>
             )}
           </p>
-          <button
-            type="button"
-            disabled
-            title="크레딧 충전은 준비 중입니다."
-            className="mt-6 block w-full cursor-not-allowed rounded-full border-2 border-slate-200 px-6 py-2.5 text-sm font-bold text-slate-400"
+          <Link
+            href="/credits"
+            className="mt-6 block w-full rounded-full bg-emerald-500 px-6 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-emerald-600"
           >
-            크레딧 충전하기 (준비 중)
-          </button>
+            크레딧 충전하기
+          </Link>
           <button
             type="button"
             onClick={() => setView("select")}

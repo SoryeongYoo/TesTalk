@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   getBlueprintSlot,
   OPIC_LEVELS,
@@ -105,6 +106,9 @@ export function ReviewQuestionCard({
             <p className="mt-1 text-xs text-amber-700">
               크레딧으로 피드백 받기 — 크레딧 1개로 채점 응시하면 15문항 전체 AI 피드백을 받을 수 있어요.
             </p>
+            <Link href="/credits" className="mt-2 inline-block text-xs font-bold text-amber-800 underline underline-offset-2">
+              크레딧 충전하러 가기 →
+            </Link>
             {hasTranscript && (
               <p className="mt-3 rounded-lg bg-white px-3 py-2 text-xs leading-relaxed text-slate-600">
                 받아쓴 답변: {question.transcript}
