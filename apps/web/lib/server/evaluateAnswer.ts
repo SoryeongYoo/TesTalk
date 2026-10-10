@@ -6,7 +6,7 @@ import {
   type EvaluateAnswerQuestion,
 } from "@testalk/shared";
 import { getAnthropicClient } from "./anthropicClient";
-import { logTokenUsage } from "./tokenUsage";
+import { createTokenUsageTotals, logTokenUsage, logTokenUsageTotals } from "./tokenUsage";
 
 /**
  * "답변 텍스트 → 평가" 피드백 엔진의 유일한 진입점.
@@ -56,39 +56,47 @@ export async function evaluateAnswer(
   const client = getAnthropicClient();
   const prompt = buildFeedbackPrompt(question, trimmedAnswer);
 
-  let lastError: unknown;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const message = await client.messages.create({
-        model: FEEDBACK_MODEL,
-        max_tokens: MAX_OUTPUT_TOKENS,
-        messages: [{ role: "user", content: prompt }],
-      });
-      // 파싱/스키마 검증 전에 기록한다 — 버려지는 응답도 토큰은 과금된다.
-      logTokenUsage("evaluateAnswer", FEEDBACK_MODEL, message.usage, { attempt });
-      const raw = parseJsonLoose(extractResponseText(message));
-      const parsed = AnswerFeedbackSchema.safeParse(raw);
+  // 성공/실패와 무관하게 이 피드백 1회(재시도 포함)에 쓴 토큰 합계를 남긴다 (generateTestSet과 같은 패턴).
+  const usageTotals = createTokenUsageTotals();
+  let succeeded = false;
+  try {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const message = await client.messages.create({
+          model: FEEDBACK_MODEL,
+          max_tokens: MAX_OUTPUT_TOKENS,
+          messages: [{ role: "user", content: prompt }],
+        });
+        // 파싱/스키마 검증 전에 기록한다 — 버려지는 응답도 토큰은 과금된다.
+        logTokenUsage("evaluateAnswer", FEEDBACK_MODEL, message.usage, { attempt }, usageTotals);
+        const raw = parseJsonLoose(extractResponseText(message));
+        const parsed = AnswerFeedbackSchema.safeParse(raw);
 
-      if (parsed.success) {
-        return parsed.data;
+        if (parsed.success) {
+          succeeded = true;
+          return parsed.data;
+        }
+
+        const issueSummary = parsed.error.issues
+          .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+          .join("; ");
+        lastError = new Error(`피드백 스키마 검증 실패: ${issueSummary}`);
+      } catch (err) {
+        lastError = err;
       }
 
-      const issueSummary = parsed.error.issues
-        .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
-        .join("; ");
-      lastError = new Error(`피드백 스키마 검증 실패: ${issueSummary}`);
-    } catch (err) {
-      lastError = err;
+      console.warn(
+        `[evaluateAnswer] 시도 ${attempt}/${MAX_ATTEMPTS} 실패: ${(lastError as Error)?.message}`,
+      );
     }
 
-    console.warn(
-      `[evaluateAnswer] 시도 ${attempt}/${MAX_ATTEMPTS} 실패: ${(lastError as Error)?.message}`,
+    throw new Error(
+      `[evaluateAnswer] ${MAX_ATTEMPTS}번 시도했지만 피드백을 만들지 못했습니다: ${(lastError as Error)?.message}`,
     );
+  } finally {
+    logTokenUsageTotals("evaluateAnswer", FEEDBACK_MODEL, usageTotals, { succeeded });
   }
-
-  throw new Error(
-    `[evaluateAnswer] ${MAX_ATTEMPTS}번 시도했지만 피드백을 만들지 못했습니다: ${(lastError as Error)?.message}`,
-  );
 }
 
 /** 응답 content에서 첫 text 블록을 꺼낸다. */
