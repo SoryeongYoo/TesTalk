@@ -8,11 +8,13 @@ import { saveExamSession } from "@/lib/client/examSessionStore";
 import { loadSurveyTopics } from "@/lib/client/surveyTopicsStore";
 import { isSpeechSynthesisSupported, speak, cancelSpeech } from "@/lib/client/speech";
 import { useAnswerRecorder } from "@/lib/client/useAnswerRecorder";
+import { useAnswerTranscript } from "@/lib/client/useAnswerTranscript";
 import { getRecommendedAnswerSeconds } from "@/lib/client/answerTiming";
 import { ProgressBar } from "@/components/common/ProgressBar";
 import { ModeToggle, type ExamMode } from "@/components/exam/ModeToggle";
 import { SpeakerControls } from "@/components/exam/SpeakerControls";
 import { RecordingControls } from "@/components/exam/RecordingControls";
+import { TranscriptPanel } from "@/components/exam/TranscriptPanel";
 import { AnswerTimer } from "@/components/exam/AnswerTimer";
 
 const MAX_PLAYS = 2;
@@ -42,6 +44,8 @@ export default function ExamPage() {
   // "다시 듣기" 유예 시간 카운트다운. null이면 카운트다운 대상이 아님(재생 전이거나 이미 다시 들었음).
   const [replaySecondsLeft, setReplaySecondsLeft] = useState<number | null>(null);
   const recorder = useAnswerRecorder();
+  // 녹음(재생용)과 별개로 브라우저 음성 인식으로 답변을 받아쓴다 — 결과 화면 피드백 입력의 초안.
+  const speech = useAnswerTranscript();
 
   useEffect(() => {
     const setup = loadExamQuestions();
@@ -67,6 +71,7 @@ export default function ExamPage() {
     // 새 문항 진입 — 이전 문항의 녹음 진행 상태/답변 타이머를 초기화한다.
     // (완료된 녹음은 이미 session.questions에 반영돼 있으므로 여기서 지워도 안전하다.)
     recorder.reset();
+    speech.reset(); // 이전 문항의 인식 결과/진행 중 인식이 이 문항으로 넘어오지 않게 버린다.
     setHasPlayedOnce(false);
     setAnswerElapsedSeconds(0);
     setReplaySecondsLeft(null);
@@ -95,9 +100,11 @@ export default function ExamPage() {
     return () => {
       cancelSpeech();
     };
-    // current(문항)이 바뀔 때만 자동 재생한다 — mode 토글 등 다른 상태 변화로는 재생하지 않는다.
+    // 문항(slot_no)이 바뀔 때만 자동 재생한다 — mode 토글 등 다른 상태 변화로는 재생하지 않는다.
+    // ⚠️ current 객체를 deps로 쓰면 안 된다: 녹음이 끝나 session.questions에 recording을
+    // 반영할 때 같은 문항의 객체가 새로 만들어져, 문제 TTS가 다시 재생되고 녹음 상태가 리셋된다.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current]);
+  }, [current?.slot_no]);
 
   // 방금 완료된 녹음을 세션의 해당 문항에 반영한다. "다음 문항"은 녹음 중엔 막혀
   // 있으므로(nextDisabled), 이 effect가 돌 때 current는 항상 그 녹음이 속한 문항이다.
@@ -120,6 +127,35 @@ export default function ExamPage() {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [recorder.recording]);
+
+  // 음성 인식은 녹음과 함께 켜고 끈다. 녹음이 실제로 시작된 뒤(= 마이크 권한을 받은 뒤)에
+  // 인식을 시작해서 권한 요청이 두 번 뜨지 않게 하고, 권한 거부 시엔 인식도 시작하지 않는다.
+  useEffect(() => {
+    if (recorder.status === "recording") {
+      speech.start();
+    } else {
+      speech.stop();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recorder.status]);
+
+  // 인식이 끝나 확정된 transcript를 세션의 해당 문항에 반영한다 (결과 화면 답변 입력란 초안).
+  // "다음 문항"은 인식 마무리(stopping) 중엔 막혀 있으므로 이때 current는 그 답변의 문항이다.
+  useEffect(() => {
+    if (speech.status !== "idle" || !current) return;
+    const slotNo = current.slot_no;
+    const transcript = speech.transcript;
+    setSession((prev) => {
+      if (!prev) return prev;
+      const target = prev.questions.find((q) => q.slot_no === slotNo);
+      if (!target || (target.transcript ?? "") === transcript) return prev;
+      return {
+        ...prev,
+        questions: prev.questions.map((q) => (q.slot_no === slotNo ? { ...q, transcript } : q)),
+      };
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speech.status, speech.transcript]);
 
   // 답변 타이머: 재생이 끝난 뒤부터 카운트업하고, (다시 듣기로) 재생 중엔 멈춘다.
   // 녹음을 정지하면 그 문항의 답변 시간으로 고정한다.
@@ -214,7 +250,9 @@ export default function ExamPage() {
     recorder.status === "recording" ? recorder.recordingSeconds : savedRecording?.durationSeconds ?? recorder.recordingSeconds;
   const audioUrl = savedRecording?.url ?? recorder.recording?.url ?? null;
   const recommendedSeconds = getRecommendedAnswerSeconds(current);
-  const nextDisabled = recorder.status === "recording";
+  // 인식 마무리(stopping) 중에 넘어가면 마지막 문장의 최종 결과가 버려지므로 잠깐 막는다.
+  const nextDisabled = recorder.status === "recording" || speech.status === "stopping";
+  const displayedTranscript = speech.status === "idle" ? current.transcript ?? speech.transcript : speech.transcript;
 
   const replayLocked = recorder.status === "recording" || replaySecondsLeft === 0;
   const replayHintText =
@@ -265,6 +303,14 @@ export default function ExamPage() {
             onStop={recorder.stop}
           />
 
+          <TranscriptPanel
+            status={speech.status}
+            transcript={displayedTranscript}
+            interimTranscript={speech.interimTranscript}
+            errorMessage={speech.errorMessage}
+            hasRecording={recordingStatus === "stopped"}
+          />
+
           <AnswerTimer
             active={hasPlayedOnce && !isSpeaking && recorder.status !== "stopped"}
             elapsedSeconds={answerElapsedSeconds}
@@ -297,7 +343,11 @@ export default function ExamPage() {
             {isLastQuestion ? "완료" : "다음 문항"}
           </button>
           {nextDisabled && (
-            <p className="text-xs font-medium text-slate-400">녹음을 정지하면 다음 문항으로 넘어갈 수 있어요</p>
+            <p className="text-xs font-medium text-slate-400">
+              {speech.status === "stopping"
+                ? "음성 인식을 마무리하는 중이에요..."
+                : "녹음을 정지하면 다음 문항으로 넘어갈 수 있어요"}
+            </p>
           )}
         </div>
       </div>

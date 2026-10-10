@@ -8,6 +8,7 @@ import {
   type ExamSessionQuestion,
 } from "@testalk/shared";
 import { evaluateAnswer } from "@/app/actions/evaluateAnswer";
+import { isSpeechRecognitionSupported } from "@/lib/client/speechRecognition";
 
 interface ReviewQuestionCardProps {
   question: ExamSessionQuestion;
@@ -23,8 +24,9 @@ interface ReviewQuestionCardProps {
  * 결과 화면(/result)에서 문항 하나를 되짚어보는 카드.
  * 문항 정보 + 문제 오디오 다시 듣기 + 내 녹음 재생(없으면 "미응답") + AI 피드백.
  *
- * ⚠️ STT 연결 전 임시 UI — 지금은 답변 텍스트를 직접 입력받아 evaluateAnswer()를
- * 호출한다. 나중에 녹음→STT가 붙으면 이 textarea 자리를 전사 결과로 대체하면 된다.
+ * 답변 입력란은 응시 중 브라우저 음성 인식으로 받아쓴 transcript로 미리 채워지고,
+ * 사용자가 인식 오류를 고친 뒤 그 텍스트로 evaluateAnswer()를 호출한다. 음성 인식
+ * 미지원/실패로 transcript가 없으면 기존처럼 직접 입력한다(폴백).
  */
 export function ReviewQuestionCard({
   question,
@@ -35,7 +37,8 @@ export function ReviewQuestionCard({
 }: ReviewQuestionCardProps) {
   const slotLabel = getBlueprintSlot(question.slot_no)?.label ?? question.function;
 
-  const [answerText, setAnswerText] = useState("");
+  const hasTranscript = (question.transcript ?? "").trim().length > 0;
+  const [answerText, setAnswerText] = useState(question.transcript ?? "");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [insufficientCredits, setInsufficientCredits] = useState(false);
@@ -105,7 +108,11 @@ export function ReviewQuestionCard({
         ) : (
           <div className="mt-2 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 p-4">
             <p className="text-xs text-slate-400">
-              녹음→STT 연결 전 임시 입력이에요. 영어 답변을 직접 입력하면 채점 피드백을 받아볼 수 있어요.
+              {hasTranscript
+                ? "음성 인식으로 받아쓴 답변이에요. 잘못 인식된 부분을 고친 뒤 피드백을 받아보세요."
+                : isSpeechRecognitionSupported()
+                  ? "받아쓴 답변이 없어요. 영어 답변을 직접 입력하면 채점 피드백을 받아볼 수 있어요."
+                  : "이 브라우저는 음성 인식을 지원하지 않아요. Chrome을 사용하거나 직접 입력하세요."}
             </p>
             <textarea
               value={answerText}

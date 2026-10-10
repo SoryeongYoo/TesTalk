@@ -52,6 +52,10 @@ export function useAnswerRecorder(): UseAnswerRecorderResult {
   const chunksRef = useRef<Blob[]>([]);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedAtRef = useRef(0);
+  // start()는 getUserMedia를 await하는 동안 reset/언마운트/중복 start가 끼어들 수 있다.
+  // 시도마다 번호를 올려서, await 이후 번호가 바뀌었으면 그 스트림은 버린다.
+  const attemptRef = useRef(0);
+  const busyRef = useRef(false);
 
   const clearTick = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -65,18 +69,47 @@ export function useAnswerRecorder(): UseAnswerRecorderResult {
     streamRef.current = null;
   }, []);
 
+  /** 진행 중인 recorder를 결과 저장 없이 버린다 (reset/언마운트용). */
+  const discardRecorder = useCallback(() => {
+    attemptRef.current += 1;
+    busyRef.current = false;
+    const recorder = mediaRecorderRef.current;
+    if (recorder) {
+      recorder.ondataavailable = null;
+      recorder.onstop = null;
+      recorder.onerror = null;
+      if (recorder.state !== "inactive") recorder.stop();
+    }
+    mediaRecorderRef.current = null;
+    chunksRef.current = [];
+    clearTick();
+    releaseStream();
+  }, [clearTick, releaseStream]);
+
   const start = useCallback(async () => {
     if (!isMediaRecordingSupported()) {
       setStatus("unsupported");
       return;
     }
+    // 권한 요청 중이거나 이미 녹음 중이면 무시한다 — 더블클릭 시 스트림이 두 개 열려
+    // 앞의 것이 해제되지 않고 마이크가 계속 켜져 있는 문제를 막는다.
+    if (busyRef.current) return;
+    busyRef.current = true;
+    const attempt = ++attemptRef.current;
 
     setErrorMessage(null);
     setStatus("requesting");
     setRecording(null);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+      if (attempt !== attemptRef.current) {
+        // 권한 대기 중에 문항이 바뀌었거나 언마운트됨 — 이 스트림은 바로 닫는다.
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
       streamRef.current = stream;
 
       const mimeType = getSupportedRecordingMimeType();
@@ -87,14 +120,25 @@ export function useAnswerRecorder(): UseAnswerRecorderResult {
         if (event.data.size > 0) chunksRef.current.push(event.data);
       };
       recorder.onstop = () => {
-        const durationSeconds = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
-        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mimeType || "audio/webm" });
-        setRecording({ url: URL.createObjectURL(blob), mimeType: blob.type, durationSeconds });
+        busyRef.current = false;
         clearTick();
         releaseStream();
+        const durationSeconds = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
+        const blob = new Blob(chunksRef.current, { type: recorder.mimeType || mimeType || "audio/webm" });
+        chunksRef.current = [];
+        if (blob.size === 0) {
+          // 캡처된 데이터가 없으면 재생 불가능한 빈 녹음을 저장하지 않고 다시 녹음하도록 안내한다.
+          setErrorMessage("녹음된 소리가 없어요. 마이크를 확인하고 다시 녹음해주세요.");
+          setStatus("error");
+          return;
+        }
+        setRecording({ url: URL.createObjectURL(blob), mimeType: blob.type, durationSeconds });
         setStatus("stopped");
       };
       recorder.onerror = () => {
+        // 에러 뒤에 stop 이벤트가 이어서 오면 "녹음 완료"로 덮어쓰지 않도록 onstop을 뗀다.
+        recorder.onstop = null;
+        busyRef.current = false;
         setErrorMessage("녹음 중 오류가 발생했어요. 다시 시도해주세요.");
         clearTick();
         releaseStream();
@@ -112,6 +156,8 @@ export function useAnswerRecorder(): UseAnswerRecorderResult {
       }, 1000);
       setStatus("recording");
     } catch (err) {
+      if (attempt !== attemptRef.current) return; // 이미 reset/언마운트된 시도의 에러는 무시한다.
+      busyRef.current = false;
       releaseStream();
       const name = err instanceof DOMException ? err.name : "";
       if (name === "NotAllowedError" || name === "PermissionDeniedError" || name === "SecurityError") {
@@ -133,29 +179,21 @@ export function useAnswerRecorder(): UseAnswerRecorderResult {
   }, []);
 
   const reset = useCallback(() => {
-    const recorder = mediaRecorderRef.current;
-    if (recorder && recorder.state !== "inactive") {
-      // 저장하지 않고 버린다 — onstop이 호출되긴 하지만 청크를 비워뒀으니 빈 Blob이 생겨도 무해하다.
-      recorder.onstop = null;
-      recorder.stop();
-    }
-    mediaRecorderRef.current = null;
-    chunksRef.current = [];
-    clearTick();
-    releaseStream();
+    // 진행 중인 녹음은 저장하지 않고 버린다 (권한 요청 대기 중인 start도 무효화된다).
+    discardRecorder();
     setRecording(null);
     setRecordingSeconds(0);
     setErrorMessage(null);
     setStatus(isMediaRecordingSupported() ? "idle" : "unsupported");
-  }, [clearTick, releaseStream]);
+  }, [discardRecorder]);
 
-  // 언마운트(문항 화면 이탈) 시 마이크 스트림/타이머가 남지 않도록 정리한다.
+  // 언마운트(문항 화면 이탈) 시 recorder/마이크 스트림/타이머가 남지 않도록 정리한다.
+  // (완료된 녹음의 Blob URL은 호출부 소유라 여기서 revoke하지 않는다.)
   useEffect(() => {
     return () => {
-      clearTick();
-      releaseStream();
+      discardRecorder();
     };
-  }, [clearTick, releaseStream]);
+  }, [discardRecorder]);
 
   return { status, errorMessage, recordingSeconds, recording, start, stop, reset };
 }

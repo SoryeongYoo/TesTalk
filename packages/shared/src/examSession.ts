@@ -20,6 +20,11 @@ export interface AnswerRecordingRef {
 /** 세션 안의 문항 하나 — blueprint 문항 원본 + 이 사용자의 녹음(있다면) + AI 피드백(있다면). */
 export interface ExamSessionQuestion extends OpicQuestion {
   recording?: AnswerRecordingRef;
+  /**
+   * 녹음 중 브라우저 음성 인식(STT)으로 받아쓴 답변 원문. 결과 화면에서 사용자가
+   * 인식 오류를 고친 뒤 피드백 입력으로 쓴다. STT 미지원/실패 시 없다.
+   */
+  transcript?: string;
   feedback?: AnswerFeedback;
 }
 
