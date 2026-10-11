@@ -1,5 +1,5 @@
 import { and, eq, gte, sql } from "drizzle-orm";
-import { getDb } from "./db/client";
+import { getDb, type DbExecutor } from "./db/client";
 import { credits } from "./db/schema";
 
 /**
@@ -55,12 +55,13 @@ export async function refundCredit(userId: string): Promise<void> {
  * 지금은 관리자 스크립트(pnpm add-credits)가 호출하고, 나중에 토스 결제 성공
  * 콜백이 이 함수를 그대로 대체 호출하도록 설계했다 (충전 로직 자체는 바뀌지 않는다).
  */
-export async function addCredits(userId: string, amount: number): Promise<number> {
+export async function addCredits(userId: string, amount: number, executor?: DbExecutor): Promise<number> {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error(`[addCredits] amount는 양의 정수여야 합니다: ${amount}`);
   }
 
-  const db = getDb();
+  // executor: 결제 주문 확정(paid 전환)과 같은 트랜잭션에서 지급할 때 넘긴다 — 둘 중 하나만 반영되는 일이 없게.
+  const db = executor ?? getDb();
   const updated = await db
     .update(credits)
     .set({ balance: sql`${credits.balance} + ${amount}`, updatedAt: new Date() })

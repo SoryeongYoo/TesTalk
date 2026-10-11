@@ -1,7 +1,13 @@
 import { StubPaymentProvider } from "./stubPaymentProvider";
+import { TossPaymentProvider } from "./tossPaymentProvider";
 import type { PaymentProvider } from "./types";
 
-export type { ChargeRequest, ChargeResult, PaymentProvider } from "./types";
+export type {
+  ConfirmRequest,
+  PaymentProvider,
+  ProviderPayment,
+  ProviderPaymentResult,
+} from "./types";
 
 /**
  * 테스트 지급(StubPaymentProvider) 허용 여부. 정확히 "true"일 때만 허용하고 기본은 false.
@@ -14,13 +20,25 @@ export function isTestGrantAllowed(): boolean {
   return process.env.TESTALK_ALLOW_TEST_GRANT === "true";
 }
 
+/** 토스 키가 둘 다 설정돼 있으면 [clientKey, secretKey]. 시크릿 키는 서버에서만 읽는다. */
+function getTossKeys(): [string, string] | null {
+  const clientKey = process.env.TOSS_CLIENT_KEY?.trim();
+  const secretKey = process.env.TOSS_SECRET_KEY?.trim();
+  return clientKey && secretKey ? [clientKey, secretKey] : null;
+}
+
 /**
  * 지금 사용할 결제 provider. null이면 결제 불가("결제 준비 중")이며 크레딧을 지급하지 않는다.
  *
- * 토스 연동 시: TossPaymentProvider(PaymentProvider 구현)를 만들어 여기서 반환하면 된다.
- * 호출부(lib/server/purchaseCredits.ts)는 바꿀 필요가 없다.
+ * 1) TOSS_CLIENT_KEY + TOSS_SECRET_KEY가 있으면 토스 (테스트/라이브는 키 접두사로 결정된다).
+ * 2) 없고 TESTALK_ALLOW_TEST_GRANT=true면 stub (로컬 개발 전용).
+ * 3) 둘 다 아니면 null.
  */
 export function getPaymentProvider(): PaymentProvider | null {
+  const tossKeys = getTossKeys();
+  if (tossKeys) {
+    return new TossPaymentProvider(...tossKeys);
+  }
   if (isTestGrantAllowed()) {
     return new StubPaymentProvider();
   }

@@ -13,7 +13,9 @@ import * as schema from "./schema";
  * SSL이 없는 로컬 Postgres(Docker 등)로 개발할 때만 DATABASE_SSL=disable로 끈다.
  */
 
-type Db = ReturnType<typeof drizzle<typeof schema>>;
+export type Db = ReturnType<typeof drizzle<typeof schema>>;
+/** getDb() 또는 db.transaction() 콜백의 tx — 같은 쿼리를 트랜잭션 안/밖에서 재사용할 때 쓴다. */
+export type DbExecutor = Db | Parameters<Parameters<Db["transaction"]>[0]>[0];
 
 // Next.js dev 서버의 Fast Refresh로 모듈이 재평가돼도 커넥션 풀이 새로 생기지
 // 않도록 globalThis에 캐싱한다 (RDS 커넥션 고갈 방지).

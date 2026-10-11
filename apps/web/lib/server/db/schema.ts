@@ -70,3 +70,32 @@ export const gradedExamFeedback = pgTable(
   },
   (table) => [primaryKey({ columns: [table.examId, table.slotNo] })],
 );
+
+/** 크레딧 구매 주문 상태. pending → paid | failed | canceled | amount_mismatch. */
+export type CreditOrderStatus = "pending" | "paid" | "failed" | "canceled" | "amount_mismatch";
+
+/**
+ * 크레딧 구매 주문(결제 기록). order_id가 PK(=unique)라 같은 주문은 한 행뿐이고,
+ * "pending/failed → paid" 조건부 UPDATE가 성공한 요청만 크레딧을 지급한다 — 성공 콜백/웹훅이
+ * 중복으로 와도 지급은 1회다 (lib/server/creditOrders.ts).
+ *
+ * users FK를 일부러 걸지 않는다 — 회원 탈퇴(users 삭제)로 결제 기록이 cascade 삭제되면 안 된다.
+ */
+export const creditOrders = pgTable("credit_orders", {
+  orderId: text("order_id").primaryKey(),
+  userId: text("user_id").notNull(),
+  packageId: text("package_id").notNull(),
+  /** 주문 시점에 서버가 패키지 표에서 정한 지급 크레딧 수. */
+  credits: integer("credits").notNull(),
+  /** 주문 시점에 서버가 패키지 표에서 정한 결제 금액(원). */
+  amount: integer("amount").notNull(),
+  provider: text("provider").notNull(),
+  /** PG 결제 키 (승인 후 채워진다). */
+  paymentKey: text("payment_key").unique(),
+  status: text("status").$type<CreditOrderStatus>().notNull().default("pending"),
+  /** 실패/취소/금액 불일치 사유 (감사·수동 환불용). */
+  failureReason: text("failure_reason"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+});

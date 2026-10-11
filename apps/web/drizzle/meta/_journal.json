@@ -29,6 +29,13 @@
       "when": 1791636488192,
       "tag": "0003_daffy_madame_masque",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791641403935,
+      "tag": "0004_majestic_serpent_society",
+      "breakpoints": true
     }
   ]
 }

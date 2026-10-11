@@ -1,13 +1,18 @@
 import { auth, signIn } from "@/auth";
 import { getCreditBalance } from "@/lib/server/credits";
-import { isTestGrantAllowed } from "@/lib/server/payments";
+import { getPaymentProvider, isTestGrantAllowed } from "@/lib/server/payments";
 import { CreditPurchasePanel } from "@/components/credits/CreditPurchasePanel";
 
 /** 잔액/테스트 모드 여부를 요청마다 서버에서 읽는다 (정적 캐싱 금지). */
 export const dynamic = "force-dynamic";
 
-export default async function CreditsPage() {
+export default async function CreditsPage({
+  searchParams,
+}: {
+  searchParams: { payment?: string | string[] };
+}) {
   const session = await auth();
+  const paymentResult = typeof searchParams.payment === "string" ? searchParams.payment : undefined;
 
   return (
     <main className="flex min-h-screen flex-col items-center bg-gradient-to-b from-emerald-50 to-white">
@@ -20,7 +25,8 @@ export default async function CreditsPage() {
           {session?.user?.id ? (
             <CreditPurchasePanel
               initialBalance={await getCreditBalance(session.user.id)}
-              testMode={isTestGrantAllowed()}
+              testMode={isTestGrantAllowed() && getPaymentProvider()?.name === "stub"}
+              paymentResult={paymentResult}
             />
           ) : (
             <div className="rounded-2xl border-2 border-emerald-100 bg-white p-8 text-center">

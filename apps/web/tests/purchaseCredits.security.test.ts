@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } fr
  * 실제 DB/세션 없이 경계만 검증한다:
  * - auth()는 mock — 테스트가 세션 유저를 정한다.
  * - addCredits(실제 지급)는 mock — "지급 안 됨" = addCredits가 한 번도 호출되지 않음.
- * - StubPaymentProvider.charge는 spy — 결제 시도 자체가 일어났는지/금액이 무엇인지 확인.
+ * - 주문 저장소(creditOrders)는 메모리 fake — 조건부 상태 전환 의미는 실제 SQL과 같다.
+ * - StubPaymentProvider.confirm은 spy — 결제 승인 시도 자체가 일어났는지/금액이 무엇인지 확인.
  */
 
 const SESSION_USER = "session-user-sub";
@@ -20,19 +21,26 @@ vi.mock("@/lib/server/credits", () => ({
   addCredits: (userId: string, amount: number) => addCreditsMock(userId, amount),
 }));
 
+vi.mock("@/lib/server/creditOrders", () => import("./helpers/fakeCreditOrders"));
+
 import { purchaseCredits } from "@/app/actions/purchaseCredits";
+import { allFakeOrders, resetFakeOrders } from "./helpers/fakeCreditOrders";
 import { StubPaymentProvider } from "@/lib/server/payments/stubPaymentProvider";
 
 /** 클라이언트가 시그니처를 무시하고 임의 인자를 보내는 상황을 흉내 낸다 (Server Action은 직렬화된 인자를 그대로 받는다). */
 const callRaw = purchaseCredits as unknown as (...args: unknown[]) => ReturnType<typeof purchaseCredits>;
 
-let chargeSpy: MockInstance<StubPaymentProvider["charge"]>;
+let confirmSpy: MockInstance<StubPaymentProvider["confirm"]>;
 const ORIGINAL_FLAG = process.env.TESTALK_ALLOW_TEST_GRANT;
 
 beforeEach(() => {
+  // 토스 키가 있으면 토스가 우선 선택되므로, 이 파일(stub 경로 검증)에서는 지운다.
+  vi.stubEnv("TOSS_CLIENT_KEY", "");
+  vi.stubEnv("TOSS_SECRET_KEY", "");
+  resetFakeOrders();
   authMock.mockResolvedValue({ user: { id: SESSION_USER, email: "user@example.com" } });
   addCreditsMock.mockClear();
-  chargeSpy = vi.spyOn(StubPaymentProvider.prototype, "charge");
+  confirmSpy = vi.spyOn(StubPaymentProvider.prototype, "confirm");
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "warn").mockImplementation(() => {});
   process.env.TESTALK_ALLOW_TEST_GRANT = "true"; // 1~3번은 "지급이 가능한 환경"에서도 막히는지 본다.
@@ -40,6 +48,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllEnvs();
   if (ORIGINAL_FLAG === undefined) delete process.env.TESTALK_ALLOW_TEST_GRANT;
   else process.env.TESTALK_ALLOW_TEST_GRANT = ORIGINAL_FLAG;
 });
@@ -49,8 +58,12 @@ describe("대조군 — 정상 구매는 지급된다", () => {
     const result = await purchaseCredits("pack10");
     expect(result).toMatchObject({ status: "ok", credits: 10 });
     expect(addCreditsMock).toHaveBeenCalledExactlyOnceWith(SESSION_USER, 10);
-    expect(chargeSpy).toHaveBeenCalledOnce();
-    expect(chargeSpy.mock.calls[0]![0]).toMatchObject({ userId: SESSION_USER, amountKrw: 8900 });
+    expect(confirmSpy).toHaveBeenCalledOnce();
+    expect(confirmSpy.mock.calls[0]![0]).toMatchObject({ amountKrw: 8900 });
+    // 주문은 세션 유저 명의로, 서버가 정한 금액/크레딧으로 생성된다.
+    expect(allFakeOrders()).toEqual([
+      expect.objectContaining({ userId: SESSION_USER, packageId: "pack10", credits: 10, amount: 8900, status: "paid" }),
+    ]);
   });
 });
 
@@ -68,7 +81,7 @@ describe("1. 위조된 packageId", () => {
   ])("%s → invalid_package, 결제/지급 없음", async (_label, packageId) => {
     const result = await callRaw(packageId);
     expect(result).toEqual({ status: "invalid_package" });
-    expect(chargeSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(addCreditsMock).not.toHaveBeenCalled();
   });
 });
@@ -84,7 +97,7 @@ describe("2. 금액/크레딧 위조", () => {
     const result = await callRaw("pack5", { credits: 9999, priceKrw: 1 });
     expect(result).toMatchObject({ status: "ok", credits: 5 });
     expect(addCreditsMock).toHaveBeenCalledExactlyOnceWith(SESSION_USER, 5);
-    expect(chargeSpy.mock.calls[0]![0]).toMatchObject({ amountKrw: 4900 });
+    expect(confirmSpy.mock.calls[0]![0]).toMatchObject({ amountKrw: 4900 });
   });
 });
 
@@ -92,7 +105,7 @@ describe("3. 유저 격리", () => {
   it("비로그인(세션 없음) → login_required, 결제/지급 없음", async () => {
     authMock.mockResolvedValue(null);
     expect(await purchaseCredits("pack5")).toEqual({ status: "login_required" });
-    expect(chargeSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(addCreditsMock).not.toHaveBeenCalled();
   });
 
@@ -132,7 +145,7 @@ describe("4. 프로덕션 안전장치 (TESTALK_ALLOW_TEST_GRANT)", () => {
     else process.env.TESTALK_ALLOW_TEST_GRANT = flag;
 
     expect(await purchaseCredits("pack20")).toEqual({ status: "payment_unavailable" });
-    expect(chargeSpy).not.toHaveBeenCalled();
+    expect(confirmSpy).not.toHaveBeenCalled();
     expect(addCreditsMock).not.toHaveBeenCalled();
   });
 });

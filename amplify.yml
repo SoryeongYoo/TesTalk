@@ -22,7 +22,9 @@ applications:
             # 그 자리에서 생성한다. 비밀값은 Amplify 환경변수에만 있고, git에는 이
             # 생성 명령만 있다(.env.production은 .gitignore 대상).
             # 로그에는 값이 아니라 키 이름만 출력한다 — 파일을 cat하지 말 것.
-            - ROOT_DIR=$(pwd); while [ ! -f "$ROOT_DIR/pnpm-workspace.yaml" ] && [ "$ROOT_DIR" != "/" ]; do ROOT_DIR=$(dirname "$ROOT_DIR"); done; env | grep -E '^(ANTHROPIC_API_KEY|COGNITO_[A-Z_]+|AUTH_[A-Z_]+|NEXTAUTH_[A-Z_]+|DATABASE_[A-Z_]+|DAILY_FREE_GENERATIONS)=' > "$ROOT_DIR/apps/web/.env.production"; echo "wrote .env.production keys:"; cut -d= -f1 "$ROOT_DIR/apps/web/.env.production"
+            # TOSS_CLIENT_KEY/TOSS_SECRET_KEY: 토스 결제 키(콘솔에 없으면 결제는 "준비 중").
+            # ⚠️ TESTALK_ALLOW_TEST_GRANT(무료 테스트 지급)는 일부러 넣지 않는다 — 프로덕션 안전장치.
+            - ROOT_DIR=$(pwd); while [ ! -f "$ROOT_DIR/pnpm-workspace.yaml" ] && [ "$ROOT_DIR" != "/" ]; do ROOT_DIR=$(dirname "$ROOT_DIR"); done; env | grep -E '^(ANTHROPIC_API_KEY|COGNITO_[A-Z_]+|AUTH_[A-Z_]+|NEXTAUTH_[A-Z_]+|DATABASE_[A-Z_]+|DAILY_FREE_GENERATIONS|TOSS_CLIENT_KEY|TOSS_SECRET_KEY)=' > "$ROOT_DIR/apps/web/.env.production"; echo "wrote .env.production keys:"; cut -d= -f1 "$ROOT_DIR/apps/web/.env.production"
             - ROOT_DIR=$(pwd); while [ ! -f "$ROOT_DIR/pnpm-workspace.yaml" ] && [ "$ROOT_DIR" != "/" ]; do ROOT_DIR=$(dirname "$ROOT_DIR"); done; cd "$ROOT_DIR" && pnpm turbo run build --filter=web
       artifacts:
         # appRoot 기준 상대 경로 -> 실제로는 apps/web/.next
