@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { auth, signIn, signOut } from "@/auth";
+import { redirect } from "next/navigation";
+import { auth, getCognitoLogoutUrl, signIn, signOut } from "@/auth";
 import { getCreditBalance } from "@/lib/server/credits";
 
 /**
@@ -49,7 +50,11 @@ export async function AuthStatus() {
       <form
         action={async () => {
           "use server";
-          await signOut();
+          // 세션 쿠키만 지우고, 리다이렉트는 Cognito 로그아웃으로 직접 보낸다
+          // (NextAuth의 redirectTo는 외부 도메인을 허용하지 않는다).
+          const logoutUrl = getCognitoLogoutUrl();
+          await signOut({ redirect: false });
+          redirect(logoutUrl ?? "/");
         }}
       >
         <button

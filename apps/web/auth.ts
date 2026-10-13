@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import NextAuth from "next-auth";
 import Cognito from "next-auth/providers/cognito";
 import { upsertUserOnLogin } from "./lib/server/db/upsertUser";
@@ -40,3 +41,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
   },
 });
+
+/**
+ * Cognito Hosted UI 세션까지 끊는 로그아웃 URL.
+ * NextAuth signOut은 우리 쿠키만 지우므로, 이 URL로 보내지 않으면 다음 로그인 때
+ * Cognito가 기존 세션으로 자동 로그인해 계정 전환이 불가능하다.
+ *
+ * logout_uri는 Cognito 앱 클라이언트의 "허용된 로그아웃 URL"과 정확히 일치해야 한다.
+ * COGNITO_LOGOUT_URI가 없으면 현재 요청의 origin(프록시 뒤면 X-Forwarded-*)을 쓴다.
+ * COGNITO_DOMAIN이 없으면 null — 호출부는 NextAuth 세션만 지우는 기존 동작으로 남는다.
+ */
+export function getCognitoLogoutUrl(): string | null {
+  const domain = process.env.COGNITO_DOMAIN;
+  const clientId = process.env.COGNITO_CLIENT_ID;
+  if (!domain || !clientId) return null;
+
+  let logoutUri = process.env.COGNITO_LOGOUT_URI;
+  if (!logoutUri) {
+    const h = headers();
+    const host = h.get("x-forwarded-host") ?? h.get("host");
+    if (!host) return null;
+    const proto =
+      h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+    logoutUri = `${proto}://${host}`;
+  }
+
+  const base = domain.startsWith("http") ? domain : `https://${domain}`;
+  const url = new URL("/logout", base);
+  url.searchParams.set("client_id", clientId);
+  url.searchParams.set("logout_uri", logoutUri);
+  return url.toString();
+}
