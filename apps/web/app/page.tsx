@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { OPIC_QUESTION_COUNT } from "@testalk/shared";
 import { auth, signIn } from "@/auth";
+import { TermsConsentNotice } from "@/components/legal/TermsConsentNotice";
 import { DEFAULT_SIGNUP_CREDITS } from "@/lib/server/credits";
 import { getDailyFreeGenerations } from "@/lib/server/generationLimit";
 
@@ -93,9 +94,12 @@ export default async function Home() {
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-xl text-amber-400">
               🔓
             </div>
-            <p className="flex-1 text-xs leading-relaxed text-amber-200/90 sm:text-sm">
-              설문은 <strong className="font-semibold text-amber-300">로그인 없이 체험</strong>할 수 있고, 연습 시험 생성과 말하기 연습은 로그인 후 하루 {getDailyFreeGenerations()}회까지 무료입니다. 15문항 <strong className="font-semibold text-amber-300">AI 상세 피드백</strong>은 크레딧 1개로 시험 1회를 채점 응시할 때 받을 수 있습니다. (신규 가입 시 <span className="underline underline-offset-2">{DEFAULT_SIGNUP_CREDITS} 크레딧</span> 지급)
-            </p>
+            <div className="flex-1">
+              <p className="text-xs leading-relaxed text-amber-200/90 sm:text-sm">
+                설문은 <strong className="font-semibold text-amber-300">로그인 없이 체험</strong>할 수 있고, 연습 시험 생성과 말하기 연습은 로그인 후 하루 {getDailyFreeGenerations()}회까지 무료입니다. 15문항 <strong className="font-semibold text-amber-300">AI 상세 피드백</strong>은 크레딧 1개로 시험 1회를 채점 응시할 때 받을 수 있습니다. (신규 가입 시 <span className="underline underline-offset-2">{DEFAULT_SIGNUP_CREDITS} 크레딧</span> 지급)
+              </p>
+              <TermsConsentNotice tone="dark" className="mt-2" />
+            </div>
             <form
               action={async () => {
                 "use server";

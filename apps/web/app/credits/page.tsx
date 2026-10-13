@@ -1,7 +1,10 @@
+import Link from "next/link";
 import { auth, signIn } from "@/auth";
 import { getCreditBalance } from "@/lib/server/credits";
 import { getPaymentProvider, isTestGrantAllowed } from "@/lib/server/payments";
 import { CreditPurchasePanel } from "@/components/credits/CreditPurchasePanel";
+import { TermsConsentNotice } from "@/components/legal/TermsConsentNotice";
+import { LEGAL_DOCUMENTS } from "@/lib/legal/documents";
 
 /** 잔액/테스트 모드 여부를 요청마다 서버에서 읽는다 (정적 캐싱 금지). */
 export const dynamic = "force-dynamic";
@@ -45,9 +48,21 @@ export default async function CreditsPage({
                   로그인하기
                 </button>
               </form>
+              <TermsConsentNotice className="mt-3" />
             </div>
           )}
         </div>
+
+        <p className="mt-6 text-center text-xs text-slate-500">
+          결제 전{" "}
+          <Link
+            href={LEGAL_DOCUMENTS.refund.href}
+            className="font-semibold text-slate-700 underline underline-offset-2 hover:text-emerald-700"
+          >
+            {LEGAL_DOCUMENTS.refund.title}
+          </Link>
+          을 확인해주세요.
+        </p>
       </div>
     </main>
   );

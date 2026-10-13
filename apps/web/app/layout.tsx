@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthStatus } from "@/components/auth/AuthStatus";
+import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
   title: "AI 오픽 모의고사",
@@ -19,6 +20,7 @@ export default function RootLayout({
           <AuthStatus />
         </header>
         {children}
+        <Footer />
       </body>
     </html>
   );

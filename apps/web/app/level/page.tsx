@@ -11,6 +11,7 @@ import {
 import { generateTestSet, type ExamMode } from "@/app/actions/generateTestSet";
 import { getCreditBalance } from "@/app/actions/getCreditBalance";
 import { signInToGenerate } from "@/app/actions/signIn";
+import { TermsConsentNotice } from "@/components/legal/TermsConsentNotice";
 import { loadSurveyTopics } from "@/lib/client/surveyTopicsStore";
 import { saveExamQuestions } from "@/lib/client/examQuestionsStore";
 import { LevelCard } from "@/components/level/LevelCard";
@@ -145,6 +146,7 @@ export default function LevelPage() {
               로그인하기
             </button>
           </form>
+          <TermsConsentNotice className="mt-3" />
         </div>
       </main>
     );
